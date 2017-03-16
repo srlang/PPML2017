@@ -38,9 +38,11 @@ def create_model():
     y_actual = tf.placeholder(tf.float32) #, shape=[None, None])
 
     # weights coefficient matrix
-    W = tf.Variable(tf.zeros([features_len, features_len]), name='Weight')
+    #W = tf.Variable(tf.zeros([features_len, features_len]), name='Weight')
+    W = tf.Variable(tf.zeros([1, features_len]), name='Weight')
     # bias coefficient
-    b = tf.Variable(tf.zeros([features_len]), name='bias')
+    #b = tf.Variable(tf.zeros([features_len]), name='bias')
+    b = tf.Variable(tf.zeros([1]), name='bias')
 
     #x = [tmin, tmax, tavg, snow, prcp] #, ticker]
 
@@ -58,7 +60,8 @@ def create_model():
     #   where actual answer should be on the order of 1e-2 (predicting
     #   fractional change rather than percentage directly as it is easy
     #   enough to change when displaying and it makes thing simpler
-    _y_tmp = tf.matmul(x, W, transpose_a=True) + b
+    #_y_tmp = tf.matmul(x, W, transpose_a=True) + b
+    _y_tmp = tf.matmul(W, x) + b
     p_y_tmp = tf.Print(_y_tmp, [_y_tmp], 'Wx + b=', first_n=100)
     y_pred = tf.reduce_sum(tf.matmul(x, _y_tmp), name='y_pred') 
     # transpose_a=True)
@@ -95,11 +98,11 @@ def create_model():
     #        which is in like the 60s/70s now)
     cost = tf.reduce_sum(tf.sqrt(tf.abs(tf.subtract(y_actual, y_pred))), name='cost')
     #cost = tf.pow(y_actual-y_pred, 2)
-    #learn_rate = 0.1
-    learn_rate = 25.000000  # stupidly high to see if we get anywhere
+    learn_rate = 0.1
+    #learn_rate = 25.000000  # stupidly high to see if we get anywhere
                             # close
     optimizer = tf.train.GradientDescentOptimizer(learn_rate).\
-            minimize(cost, var_list=[W,b])
+            minimize(cost) #, var_list=[W,b])
         #.minimize(loss)
     return x, y_pred, optimizer, y_actual, cost, None
 
@@ -153,7 +156,7 @@ def main():
     Trains and evaluates a (linear) model.
     '''
     DEBUG = True
-    training_sessions = 10000
+    training_sessions = 200
     # 10k now b/c i want to see how not terrible it /can/ get
     display_step = 10
     save_step = 5
@@ -172,7 +175,7 @@ def main():
     with tf.Session() as sess:
         init(sess, saver)
 
-        for i in range(training_sessions):
+        for i in range(training_sessions+1):
             train_x, train_y = get_train_data(data)
             test_x, test_y = get_test_data(data)
             ######
@@ -201,6 +204,9 @@ def main():
                 print('input: %s, output: %f, expected: %f, cost %f' % \
                         (test_x[r], y_f, y_o, c))
                 print('%d step; cost: %s' % (i, c))
+                # LaTeX table of "results" (easy enough to grep/sed out later)
+                # Headers: Iteration number, expected, predicted, cost
+                print('%% %d & %.5ff & %.5f & %.2f \\\\' % (i, y_o, y_f, c))
                 #print(c.eval())
 
                 # Summarize stuff
